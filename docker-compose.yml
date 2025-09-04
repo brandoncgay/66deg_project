@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  data-pipeline:
+    build: .
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./notebooks:/app/notebooks
+      - ./sql:/app/sql
+      - ~/.kaggle:/root/.kaggle:ro
+    environment:
+      - PYTHONPATH=/app
+    working_dir: /app
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+
+  python-shell:
+    build: .
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ~/.kaggle:/root/.kaggle:ro
+    environment:
+      - PYTHONPATH=/app
+    working_dir: /app
+    command: python
+    stdin_open: true
+    tty: true
+    profiles:
+      - shell

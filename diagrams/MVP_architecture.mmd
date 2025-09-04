@@ -1,0 +1,56 @@
+flowchart TD
+  subgraph External
+    CLOUDSQL[(Cloud SQL<br/>Source Database)]
+  end
+
+  subgraph "GCP MVP Pipeline"
+    subgraph Processing
+      SCHED[Cloud Scheduler<br/>Batch Trigger]
+      DATAFLOW[Dataflow<br/>Batch ETL Job]
+    end
+
+    subgraph Storage
+      BQ_RAW[(BigQuery<br/>Raw Ingestion)]
+      GCS_ARCHIVE[(Cloud Storage<br/>Data Archive)]
+    end
+
+    subgraph "Medallion Architecture"
+      DATAFORM[Dataform<br/>SQLX + Tests]
+      BQ_BRONZE[(BigQuery<br/>Bronze Tables)]
+      BQ_SILVER[(BigQuery<br/>Silver Tables)]
+      BQ_GOLD[(BigQuery<br/>Gold Marts)]
+    end
+
+    subgraph "API Layer"
+      CLOUDRUN[Cloud Run<br/>FastAPI Service]
+      APIGW[API Gateway<br/>Optional]
+    end
+  end
+
+  %% Data Flow
+  CLOUDSQL -->|JDBC Read| DATAFLOW
+  DATAFLOW -->|Batch Load| BQ_RAW
+  DATAFLOW -->|Archive| GCS_ARCHIVE
+  
+  %% Medallion Pipeline
+  BQ_RAW -->|Raw Data| DATAFORM
+  DATAFORM -->|Clean & Test| BQ_BRONZE
+  BQ_BRONZE -->|Transform| BQ_SILVER
+  BQ_SILVER -->|Business Logic| BQ_GOLD
+  
+  %% API Serving
+  BQ_GOLD -->|Query Gold| CLOUDRUN
+  CLOUDRUN --> APIGW
+  
+  %% Scheduling
+  SCHED -->|Trigger Batch| DATAFLOW
+  SCHED -->|Trigger Transform| DATAFORM
+
+  %% Styling - MVP Focus on API and Reports
+  classDef mvpFocus fill:#ff9999,stroke:#333,stroke-width:3px
+  classDef medallion fill:#99ccff,stroke:#333,stroke-width:2px
+  classDef api fill:#99ff99,stroke:#333,stroke-width:3px
+  
+  class BQ_GOLD,CLOUDRUN,APIGW api
+  class DATAFORM,BQ_BRONZE,BQ_SILVER medallion
+  class DATAFLOW mvpFocus
