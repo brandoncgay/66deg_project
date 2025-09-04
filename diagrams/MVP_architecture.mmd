@@ -21,9 +21,9 @@ flowchart TD
       BQ_GOLD[(BigQuery<br/>Gold Marts)]
     end
 
-    subgraph "API Layer"
-      CLOUDRUN[Cloud Run<br/>FastAPI Service]
-      APIGW[API Gateway<br/>Optional]
+    subgraph "Automated Reporting"
+      CF_REPORTS[Cloud Functions<br/>Report Generator]
+      REPORTS[Automated Reports<br/>Email + GCS]
     end
   end
 
@@ -38,19 +38,20 @@ flowchart TD
   BQ_BRONZE -->|Transform| BQ_SILVER
   BQ_SILVER -->|Business Logic| BQ_GOLD
   
-  %% API Serving
-  BQ_GOLD -->|Query Gold| CLOUDRUN
-  CLOUDRUN --> APIGW
+  %% Report Generation (triggered by Dataform completion)
+  DATAFORM -->|Completion Trigger| CF_REPORTS
+  CF_REPORTS -->|Query Gold & Generate| REPORTS
+  BQ_GOLD -.->|Data Source| CF_REPORTS
   
   %% Scheduling
   SCHED -->|Trigger Batch| DATAFLOW
-  SCHED -->|Trigger Transform| DATAFORM
 
   %% Styling - MVP Focus on API and Reports
-  classDef mvpFocus fill:#ff9999,stroke:#333,stroke-width:3px
-  classDef medallion fill:#99ccff,stroke:#333,stroke-width:2px
-  classDef api fill:#99ff99,stroke:#333,stroke-width:3px
+  classDef mvpFocus fill:#ffdddd,stroke:#333,stroke-width:3px,color:#000
+  classDef medallion fill:#e6f3ff,stroke:#333,stroke-width:2px,color:#000
+  classDef api fill:#e6ffe6,stroke:#333,stroke-width:3px,color:#000
+  classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px,color:#000
   
-  class BQ_GOLD,CLOUDRUN,APIGW api
+  class CF_REPORTS,REPORTS api
   class DATAFORM,BQ_BRONZE,BQ_SILVER medallion
   class DATAFLOW mvpFocus

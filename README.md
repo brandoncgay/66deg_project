@@ -114,14 +114,69 @@ All reports use:
 - Window functions (RANK, running totals)
 - Aggregations and statistical functions
 
-## Key Features
+## GCP Architecture
 
-- ✅ **Simplified Architecture**: Single Python file for all ETL logic
-- ✅ **External SQL**: All database operations in separate `.sql` files
-- ✅ **Path Independence**: Works from project root or subdirectories
-- ✅ **Error Handling**: Robust error handling and debugging output
-- ✅ **Clean Schema**: Fresh database creation on each run
-- ✅ **Jupyter Integration**: Step-by-step notebook demonstration
+```mermaid
+flowchart TD
+  subgraph External
+    CLOUDSQL[(Cloud SQL<br/>Source Database)]
+  end
+
+  subgraph "GCP MVP Pipeline"
+    subgraph Processing
+      SCHED[Cloud Scheduler<br/>Batch Trigger]
+      DATAFLOW[Dataflow<br/>Batch ETL Job]
+    end
+
+    subgraph Storage
+      BQ_RAW[(BigQuery<br/>Raw Ingestion)]
+      GCS_ARCHIVE[(Cloud Storage<br/>Data Archive)]
+    end
+
+    subgraph "Medallion Architecture"
+      DATAFORM[Dataform<br/>SQLX + Tests]
+      BQ_BRONZE[(BigQuery<br/>Bronze Tables)]
+      BQ_SILVER[(BigQuery<br/>Silver Tables)]
+      BQ_GOLD[(BigQuery<br/>Gold Marts)]
+    end
+
+    subgraph "Automated Reporting"
+      CF_REPORTS[Cloud Functions<br/>Report Generator]
+      REPORTS[Automated Reports<br/>Email + GCS]
+    end
+  end
+
+  %% Data Flow
+  CLOUDSQL -->|JDBC Read| DATAFLOW
+  DATAFLOW -->|Batch Load| BQ_RAW
+  DATAFLOW -->|Archive| GCS_ARCHIVE
+  
+  %% Medallion Pipeline
+  BQ_RAW -->|Raw Data| DATAFORM
+  DATAFORM -->|Clean & Test| BQ_BRONZE
+  BQ_BRONZE -->|Transform| BQ_SILVER
+  BQ_SILVER -->|Business Logic| BQ_GOLD
+  
+  %% Report Generation (triggered by Dataform completion)
+  DATAFORM -->|Completion Trigger| CF_REPORTS
+  CF_REPORTS -->|Query Gold & Generate| REPORTS
+  BQ_GOLD -.->|Data Source| CF_REPORTS
+  
+  %% Scheduling
+  SCHED -->|Trigger Batch| DATAFLOW
+
+  %% Styling - MVP Focus on API and Reports
+  classDef mvpFocus fill:#ffdddd,stroke:#333,stroke-width:3px,color:#000
+  classDef medallion fill:#e6f3ff,stroke:#333,stroke-width:2px,color:#000
+  classDef api fill:#e6ffe6,stroke:#333,stroke-width:3px,color:#000
+  classDef default fill:#f9f9f9,stroke:#333,stroke-width:1px,color:#000
+  
+  class CF_REPORTS,REPORTS api
+  class DATAFORM,BQ_BRONZE,BQ_SILVER medallion
+  class DATAFLOW mvpFocus
+```
+
+**Production MVP Architecture**: Batch ingestion from Cloud SQL via Dataflow, medallion architecture (bronze/silver/gold) with Dataform for data quality and testing, ending with automated report generation via Cloud Functions.
 
 ## Docker Environment
 
