@@ -25,16 +25,16 @@ A simplified ETL pipeline that extracts supermarket sales data from Kaggle, tran
 
 ## Features
 
-### Simplified ETL Pipeline
-- **Extract**: Kaggle API integration for supermarket sales data
-- **Transform**: Dimensional modeling (star schema)
-- **Load**: SQLite database with external SQL schema
-- **Report**: Automated reports using external SQL queries
+### Enhanced ETL Pipeline with Date/Time Analytics
+- **Extract**: Kaggle API integration with intelligent data type detection
+- **Transform**: Dimensional modeling (star schema) with proper date/time handling
+- **Load**: SQLite database with DATE/TIME/DATETIME column types
+- **Report**: Advanced temporal analytics with time-of-day, day-of-week, and monthly patterns
 
 ### Database Schema (Star Schema)
-- **dim_product**: Product line, pricing, cost, and margin data
-- **dim_store**: Store branch and city information  
-- **fact_sales**: Sales transactions with foreign key relationships
+- **dim_product**: Product line with averaged pricing, cost, and margin data (6 unique products)
+- **dim_store**: Store branch and city information (3 unique locations)
+- **fact_sales**: Sales transactions with proper DATE/TIME/DATETIME columns and foreign keys (1000 transactions)
 
 ### External SQL Files
 - All database creation SQL is in `sql/create_tables.sql`
@@ -75,25 +75,27 @@ jupyter notebook notebooks/supermarket_sales_pipeline.ipynb
 ## Pipeline Steps
 
 ### 1. Extract
-- Downloads dataset from Kaggle API
-- Loads CSV into pandas DataFrame
-- 1000 transaction records with 17 columns
+- Downloads dataset from Kaggle API with intelligent data type detection
+- Handles both aggregated data (18 rows → expanded) and individual transaction data (1000 rows)
+- Loads CSV into pandas DataFrame with proper column normalization
 
 ### 2. Transform  
-- Cleans and normalizes column names
-- Creates dimension tables (products and stores)
-- Builds fact table with foreign key relationships
-- Handles column name mapping (`tax_5%` → `tax_5`)
+- **Data Type Detection**: Distinguishes between aggregated vs individual transaction datasets
+- **Date/Time Processing**: Converts to proper DATE, TIME, DATETIME column types
+- **Dimensional Modeling**: Creates properly deduplicated dimension tables by product_line
+- **Synthetic Data Generation**: Expands aggregated data with realistic temporal patterns when needed
+- **Column Mapping**: Handles special characters (`Tax 5%` → `tax_5`)
 
 ### 3. Load
-- Creates database schema from `sql/create_tables.sql`
+- Creates database schema from `sql/create_tables.sql` with proper DATE/TIME/DATETIME types
 - Loads dimension tables first (referential integrity)
-- Inserts fact table data with proper foreign keys
+- Inserts fact table data with proper foreign keys and temporal columns
 
 ### 4. Report
-- Executes SQL queries from external `.sql` files
-- Generates business reports with joins and window functions
-- Saves results as CSV files in `data/reports/`
+- Executes advanced SQL queries from external `.sql` files with temporal analytics
+- Generates comprehensive business intelligence reports with date/time insights
+- Uses window functions, conditional aggregation, and statistical filtering
+- Saves enhanced reports as CSV files in `data/reports/`
 
 ## Dataset
 
@@ -105,14 +107,44 @@ Uses [Supermarket Sales Dataset](https://www.kaggle.com/datasets/lovishbansal123
 
 ## Reports Generated
 
-1. **Sales by Product Line**: Revenue and transaction analysis
-2. **Sales by Store**: Performance ranking with window functions  
-3. **Product Performance by City**: Cross-dimensional analysis
+The pipeline generates comprehensive business intelligence reports with advanced date/time analytics:
 
-All reports use:
-- SQL JOINs between fact and dimension tables
-- Window functions (RANK, running totals)
-- Aggregations and statistical functions
+### 1. **Sales by Product Line** (`sales_by_product_line.csv`)
+Complete product performance analysis with temporal insights:
+- **Core Metrics**: Transaction count, total revenue, average transaction value, customer ratings
+- **Date Range Analysis**: First/last sale dates, active days, average daily revenue  
+- **Time-of-Day Patterns**: Morning (9AM-12PM), afternoon (1PM-5PM), evening (6PM-9PM) performance
+- **Business Value**: Identifies top-performing product categories and optimal selling times
+
+**Sample columns**: `product_line`, `transaction_count`, `total_revenue`, `avg_rating`, `first_sale_date`, `last_sale_date`, `active_days`, `avg_daily_revenue`, `morning_avg_transaction`, `afternoon_avg_transaction`, `evening_avg_transaction`
+
+### 2. **Sales by Store** (`sales_by_store.csv`)
+Advanced store performance with rankings and trend analysis:
+- **Performance Rankings**: Revenue-based store rankings using window functions
+- **Running Totals**: Cumulative revenue analysis across all stores
+- **Weekend vs Weekday**: Comparative analysis of weekend and weekday performance
+- **Recent Performance**: Last 7 days revenue tracking for trend analysis
+- **Geographic Insights**: City and branch performance comparison
+
+**Sample columns**: `city`, `branch`, `transaction_count`, `total_revenue`, `revenue_rank`, `running_total`, `weekend_avg_transaction`, `weekday_avg_transaction`, `recent_7day_revenue`
+
+### 3. **Product Performance by City** (`product_performance_by_city.csv`)
+Cross-dimensional analysis with sophisticated temporal patterns:
+- **Geographic Rankings**: Product performance rankings within each city
+- **Monthly Trends**: Transaction counts by month (Jan/Feb/Mar analysis)
+- **Peak Day Analysis**: Best performing day of week with weekend peak identification
+- **Statistical Filtering**: Only includes combinations with 3+ transactions for significance
+- **Multi-Dimensional Insights**: Product success varies by location and time
+
+**Sample columns**: `product_line`, `city`, `transaction_count`, `city_rank`, `jan_transactions`, `feb_transactions`, `mar_transactions`, `best_day_of_week`, `sunday_peak`, `saturday_peak`
+
+### **Advanced SQL Features Used**
+- **Star Schema Joins**: Efficient fact-to-dimension table relationships
+- **Window Functions**: `RANK() OVER()`, `SUM() OVER()` for rankings and running totals
+- **Temporal Analytics**: `strftime()` functions for date/time pattern analysis
+- **Conditional Aggregation**: `CASE WHEN` statements for time-based segmentation
+- **Statistical Filtering**: `HAVING` clauses for data quality and significance
+- **Partitioned Analytics**: `PARTITION BY` for city-specific rankings
 
 ## GCP Architecture
 
